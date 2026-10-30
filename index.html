@@ -57,6 +57,9 @@
             transition: border-color 0.2s;
         }
         input:focus { border-color: #3b82f6; }
+          .input-group button {
+    height: 44px;        /* Standardized line height for the input grid action elements */
+}
         button {
             padding: 0 24px;
             border-radius: 10px;
@@ -72,9 +75,18 @@
         button:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
         
         /* New Voice Feature Buttons Styling */
-        #mic-btn { background: #10b981; }
-        #mic-btn:hover { background: #059669; }
-        #mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
+        /* New Voice Feature Buttons Styling */
+#mic-btn { 
+    background: #10b981;
+    width: 44px;        
+    min-width: 44px;     
+    height: 44px;        
+    padding: 0;          
+    font-size: 1.1rem;   
+}
+#mic-btn:hover { background: #059669; }
+#mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
+
 
         .msg-wrapper {
             display: flex;
@@ -89,16 +101,22 @@
         .ai .msg { background: #334155; color: #f1f5f9; border-bottom-left-radius: 2px; }
         
         .speak-msg-btn {
-            background: transparent;
-            color: #94a3b8;
-            font-size: 0.75rem;
-            font-weight: normal;
-            padding: 4px 8px;
-            margin-top: 4px;
-            border-radius: 4px;
-            align-self: flex-start;
-        }
-        .speak-msg-btn:hover { background: #334155; color: #f8fafc; }
+    background: #334155;
+    color: #94a3b8;
+    font-size: 0.75rem;  /* Keeps the font text neat and secondary */
+    font-weight: normal;
+    padding: 2px 6px;    
+    margin-top: 4px;
+    border-radius: 6px;
+    align-self: flex-start;
+    border: 1px solid #475569;
+    height: auto;        
+    cursor: pointer;
+}
+        .speak-msg-btn:hover { 
+    background: #475569; 
+    color: #f8fafc; 
+}
 
         .error .msg { background: #7f1d1d; border: 1px solid #f87171; color: #fca5a5; }
         .msg p { margin: 0 0 8px 0; }
@@ -159,7 +177,7 @@
 
             recognition.onstart = () => {
                 isListening = true;
-                micBtn.textContent = "🛑 Stop";
+                micBtn.textContent = "🛑";
                 micBtn.classList.add("listening");
                 box.placeholder = "Listening to your voice...";
             };
@@ -300,7 +318,7 @@
                 // Append the dynamic text-to-speech button right after streaming ends
                 const speakBtn = document.createElement("button");
                 speakBtn.className = "speak-msg-btn";
-                speakBtn.innerHTML = "🔊 Speak";
+                speakBtn.innerHTML = "🔊";
                 speakBtn.onclick = function() { speakText(aiBubble.innerText); };
                 aiWrapper.appendChild(speakBtn);
 
