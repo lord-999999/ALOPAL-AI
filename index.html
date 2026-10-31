@@ -80,34 +80,67 @@
   max-width: 650px;
   margin-top: 8px;
 }
-        .input-group { display: flex; gap: 10px; }
+        .input-group {
+              gap: 6px;
+              height: 44px;
+    flex-shrink: 0; /* CRITICAL: Stops the Send button from squeezing */
+    display: flex;
+    gap: 8px; /* Slightly tighter gap for mobile room */
+    align-items: center;
+    width: 100%;}
         input {
+              padding: 12px 14px;
             flex: 1;
-            padding: 14px 18px;
-            border-radius: 10px;
-            border: 1px solid #475569;
-            background: #334155;
-            color: white;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
+    min-width: 0; /* CRITICAL: Prevents input box from breaking flex limits */
+    padding: 14px 18px;
+    border-radius: 10px;
+    border: 1px solid #475569;
+    background: #334155;
+    color: white;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
         }
+          
+#upload-btn {
+    background: #64748b;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 1.1rem;
+    flex-shrink: 0; /* CRITICAL: Stops the clip button from squeezing */
+    display: inline-flex; /* Centers emoji perfectly */
+    align-items: center;
+    justify-content: center;
+}
         input:focus { border-color: #3b82f6; }
         .input-group button { height: 44px; }
         button {
-            padding: 0 24px;
+            padding: 0 14px;
             border-radius: 10px;
             border: none;
             background: #3b82f6;
             color: white;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             transition: background 0.2s, opacity 0.2s;
         }
         button:hover { background: #2563eb; }
         button:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
-        #mic-btn { background: #10b981; width: 44px; min-width: 44px; height: 44px; padding: 0; font-size: 1.1rem; }
+        #mic-btn {
+    background: #10b981;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 1.1rem;
+    flex-shrink: 0; /* CRITICAL: Stops the mic button from squeezing */
+    display: inline-flex; /* Centers emoji perfectly */
+    align-items: center;
+    justify-content: center;
+}
         #mic-btn:hover { background: #059669; }
         #mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
         .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; position: relative; }
@@ -142,6 +175,13 @@
         .msg ul, .msg ol { margin: 4px 0; padding-left: 20px; }
         .thinking { opacity: 0.7; font-style: italic; animation: pulse 1.5s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+          
+@media (max-width: 500px) {
+    #chat-container {
+        padding: 16px;
+        height: 82vh; /* Slightly shorter container to fit native mobile browser bars */
+    }
+      
     </style>
 </head>
 <body>
@@ -164,7 +204,7 @@
   <button id="sendBtn" onclick="send()">Send</button>
   <!-- Hidden file selector and explicit paperclip button -->
   <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(this)" />
-  <button id="upload-btn" onclick="document.getElementById('fileInput').click()" style="background: #64748b; width: 44px; min-width: 44px; height: 44px; padding: 0; font-size: 1.1rem;">📎</button>
+  <button id="upload-btn" onclick="document.getElementById('fileInput').click()" >📎</button>
   <button id="mic-btn" onclick="toggleListening()">🎤</button>
 </div>
 
