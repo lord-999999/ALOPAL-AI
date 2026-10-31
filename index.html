@@ -6,6 +6,11 @@
     <title>OPAL AI</title>
     <script src="https://jsdelivr.com/npm/marked@4.3.0/marked.min.js"></script>
     <link rel="shortcut icon" href="assets/favicon.svg" >
+      <!-- PDF.js for parsing PDF documents -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<!-- SheetJS for parsing Excel documents (.xlsx, .xls, .csv) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
         * { box-sizing: border-box; }
         body {
@@ -20,6 +25,28 @@
             margin: 0;
             padding: 10px;
         }
+          
+#saveFileBtn, .link {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+#saveFileBtn:hover, .link:hover {
+  background: rgba(71, 85, 105, 0.8);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
         #chat-container {
             width: 100%;
             max-width: 650px;
@@ -45,6 +72,14 @@
             gap: 16px;
             border: 1px solid #1e293b;
         }
+          .footer-btn-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 650px;
+  margin-top: 8px;
+}
         .input-group { display: flex; gap: 10px; }
         input {
             flex: 1;
@@ -125,17 +160,25 @@
             </div>
         </div>
         <div class="input-group">
-            <input type="text" id="userInput" placeholder="Type a message..." autocomplete="off" onkeypress="if(event.key === 'Enter') send()" />
-            <button id="sendBtn" onclick="send()">Send</button>
-            <button id="mic-btn" onclick="toggleListening()">🎤</button>
-        </div>
-    </div>
-    <a href="assets/notice.html" target="_blank">Privacy notice & more</a>
+  <input type="text" id="userInput" placeholder="Type a message..." autocomplete="off" onkeypress="if(event.key === 'Enter') send()" />
+  <button id="sendBtn" onclick="send()">Send</button>
+  <!-- Hidden file selector and explicit paperclip button -->
+  <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(this)" />
+  <button id="upload-btn" onclick="document.getElementById('fileInput').click()" style="background: #64748b; width: 44px; min-width: 44px; height: 44px; padding: 0; font-size: 1.1rem;">📎</button>
+  <button id="mic-btn" onclick="toggleListening()">🎤</button>
+</div>
 
+    </div>
+    <div class="footer-btn-container">
+ <button id="saveFileBtn">Download OPAL AI</button>
+ <a href="assets/notice.html" target="_blank" class="link">Privacy notice & more</a>
+</div>
     <script>const chat = document.getElementById("messages");
 const box = document.getElementById("userInput");
 const btn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("mic-btn");
+
+          box.focus();
 
 function speakText(text) {
     window.speechSynthesis.cancel();
@@ -216,9 +259,120 @@ if (typeof marked !== 'undefined') {
     marked.setOptions({ gfm: true, breaks: true });
 }
 
+
+let attachedFileContent = "";
+// Add these 2 lines right above your handleFileSelect function to handle PDFs/Excel
+if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    box.disabled = true;
+    btn.disabled = true;
+    box.placeholder = `⌛ Processing ${file.name}...`;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    // 1. Spreadsheet Data Extraction (Excel, CSV)
+    if (['xlsx', 'xls', 'csv'].includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                let parsedData = `[Attached Sheet Dataset: ${file.name}]\n`;
+                workbook.SheetNames.forEach(name => {
+                    parsedData += `\n[Sheet: ${name}]\n` + XLSX.utils.sheet_to_txt(workbook.Sheets[name]);
+                });
+                finalizeFileLoad(file.name, parsedData);
+            } catch (err) { parseAsHexDumpFallback(file); }
+        };
+        reader.readAsArrayBuffer(file);
+    } 
+    // 2. Document Text Extraction (PDF)
+    else if (ext === 'pdf') {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const typedarray = new Uint8Array(e.target.result);
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let textAccumulator = `[Attached PDF Document: ${file.name}]\n`;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContext = await page.getTextContent();
+                    textAccumulator += `\n--- Page ${i} ---\n` + textContext.items.map(item => item.str).join(" ") + "\n";
+                }
+                finalizeFileLoad(file.name, textAccumulator);
+            } catch (err) { parseAsHexDumpFallback(file); }
+        };
+        reader.readAsArrayBuffer(file);
+    } 
+    // 3. Known Plain Text Formats
+    else if (['txt', 'md', 'html', 'css', 'js', 'json', 'xml', 'py', 'java', 'c', 'cpp', 'sh', 'yaml', 'ini'].includes(ext) || file.type.startsWith('text/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            finalizeFileLoad(file.name, `[Attached Content File: ${file.name}]\n\n${e.target.result}`);
+        };
+        reader.readAsText(file);
+    } 
+    // 4. Absolute Fallback for Anything Else (Images, Media, unknown binaries)
+    else {
+        parseAsHexDumpFallback(file);
+    }
+}
+
+// Global safety valve to handle binary file variants safely without breaking
+function parseAsHexDumpFallback(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const buffer = e.target.result;
+        const uint8 = new Uint8Array(buffer);
+        let hexDump = `[Binary File Structural Metadata Dump: ${file.name}]\n`;
+        hexDump += `MIME Type: ${file.type || 'unknown'}\n`;
+        hexDump += `Byte Dimension: ${file.size} bytes\n\n`;
+        
+        const maxBytesToDump = Math.min(uint8.length, 12000); 
+        let currentLine = "";
+        
+        for (let i = 0; i < maxBytesToDump; i++) {
+            if (i % 16 === 0) {
+                if (currentLine) hexDump += currentLine + "\n";
+                hexDump += i.toString(16).padStart(8, '0') + ": ";
+                currentLine = "";
+            }
+            hexDump += uint8[i].toString(16).padStart(2, '0') + " ";
+        }
+        if (currentLine) hexDump += currentLine + "\n";
+        if (uint8.length > maxBytesToDump) {
+            hexDump += `\n[... Truncated due to size. Remaining data: ${uint8.length - maxBytesToDump} bytes ...]`;
+        }
+        finalizeFileLoad(file.name, hexDump);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Clean UI interface wrapper
+function finalizeFileLoad(fileName, dataContent) {
+    attachedFileContent = dataContent;
+    box.disabled = false;
+    btn.disabled = false;
+    box.placeholder = `📄 Loaded: ${fileName}. Type your prompt...`;
+    box.focus();
+}
+
+
+
 async function send() {
-    const text = box.value.trim();
-    if (!text || btn.disabled) return;
+    let text = box.value.trim();
+    // Allow sending if there is either text or an attached file
+    if (!text && !attachedFileContent) return;
+    if (btn.disabled) return;
+
+    // Combine the file context with the user query if a file is attached
+    if (attachedFileContent) {
+        text = text ? `${attachedFileContent}\n\nUser Question: ${text}` : attachedFileContent;
+    }
 
     box.disabled = true;
     btn.disabled = true;
@@ -229,13 +383,22 @@ async function send() {
     userWrapper.className = "msg-wrapper user";
     const userBubble = document.createElement("div");
     userBubble.className = "msg";
-    userBubble.textContent = text;
+    // Display the original typed text, or a placeholder if they only sent a file
+    userBubble.textContent = box.value.trim() || "Analyze file contents.";
     userWrapper.appendChild(userBubble);
     chat.appendChild(userWrapper);
     
     box.value = "";
     chat.scrollTop = chat.scrollHeight;
+    
+    // Push the compiled payload (file content + question) to the history
     conversationHistory.push({ role: "user", content: text });
+
+    // Reset file tracker state for the next turn
+    attachedFileContent = "";
+    const fileInputEl = document.getElementById('fileInput');
+    if (fileInputEl) fileInputEl.value = ""; 
+    box.placeholder = "Type a message...";
 
     // AI message container setups
     const aiWrapper = document.createElement("div");
@@ -248,7 +411,24 @@ async function send() {
     chat.scrollTop = chat.scrollHeight;
 
     // List of models to try sequentially if one fails or gets rate-limited (429)
-    const modelsToTry = ["openai", "mistral", "llama", "qwen"];
+    const modelsToTry = [
+      "openai",     // GPT-4o
+      "qwen",       // Qwen 2.5 72B
+      "mistral",    // Mistral Nemo
+      "llama",      // Llama 3.1 70B
+      "searchgpt",  // GPT-4o with real-time web search capabilities
+      "qwen-coder", // Qwen 2.5 Coder 32B (Great for code tasks)
+      "deepseek",   // DeepSeek V3
+      "nemotron",   // Llama 3.1 Nemotron 70B
+      "unity",      // Custom Unity engine model
+      "midijourney",// Stylized text model
+      "rtist",      // Art/Creative targeted model
+      "hyperspace", // Fast reasoning model
+      "karma",      // Alternative open-source layer
+      "claude",     // Claude hybrid layer
+      "p1",         // Experimental speed-optimized model
+      "llamalight"  // Lightweight, ultra-fast Llama model variant
+    ];
     let response = null;
     let selectedModel = "";
 
@@ -269,7 +449,7 @@ async function send() {
             if (res.ok) {
                 response = res;
                 selectedModel = model;
-                break; // Break out of the loop once we successfully get a stream response
+                break; 
             } else {
                 console.warn(`Model ${model} failed with status: ${res.status}`);
             }
@@ -279,7 +459,6 @@ async function send() {
     }
 
     try {
-        // If all models in our fallback list failed, throw an error
         if (!response) {
             throw new Error("All available AI engine endpoints are currently rate-limited or busy. Please wait a minute.");
         }
@@ -292,7 +471,6 @@ async function send() {
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
             buffer = lines.pop();
@@ -300,7 +478,6 @@ async function send() {
             for (const line of lines) {
                 const cleanedLine = line.trim();
                 if (!cleanedLine || cleanedLine === "data: [DONE]") continue;
-
                 if (cleanedLine.startsWith("data: ")) {
                     try {
                         const parsed = JSON.parse(cleanedLine.replace(/^data:\s*/, ""));
@@ -346,7 +523,7 @@ async function send() {
         actionPanel.appendChild(speakBtn);
         actionPanel.appendChild(copyBtn);
         aiWrapper.appendChild(actionPanel);
-
+        
         conversationHistory.push({ role: "assistant", content: completeText });
 
     } catch (error) {
@@ -363,5 +540,71 @@ async function send() {
 }
 
 </script>
+
+
+
+
+
+
+
+
+           
+      
+      <script>
+document.getElementById('saveFileBtn').addEventListener('click', () => {
+    // 1. Clone the document body and clear the messages container so the saved file is fresh
+    const parser = new DOMParser();
+    const docClone = parser.parseFromString(document.documentElement.outerHTML, 'text/html');
+    const messagesContainer = docClone.getElementById('messages');
+
+    if (messagesContainer) {
+        // Keeps the very first greeting and applies the corrected SVG paths + actions
+        messagesContainer.innerHTML = `
+            <div class="msg-wrapper ai">
+                <div class="msg">Hello! Ask me anything. I am powered by a live, open-infrastructure cloud engine.</div>
+                <div class="action-buttons">
+                    <button class="speak-msg-btn" onclick="speakText(this.closest('.msg-wrapper').querySelector('.msg').innerText)">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <g transform="translate(12, 12) scale(0.2, 0.2) translate(-12, -12)">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" fill-opacity="0.1"/>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="currentColor"/>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="currentColor"/>
+                            </g>
+                        </svg>
+                    </button>
+                    <button class="copy-btn" onclick="copyText(this.closest('.msg-wrapper').querySelector('.msg').innerText, this)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 18a2 2 0 0 1-1.425-.575A2 2 0 0 1 7 16V4q0-.825.575-1.4Q8.175 2 9 2h9q.825 0 1.4.6.6.575.6 1.4v12q0 .825-.6 1.425Q18.825 18 18 18zm0-2h9V4H9zm-4 6a2 2 0 0 1-1.425-.575A2 2 0 0 1 3 20V6h2v14h11v2zm4-6V4z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>`;
+    }
+    const pageHtmlContent = docClone.documentElement.outerHTML;
+
+    try {
+        // 2. Create a memory blob containing the HTML text
+        const blob = new Blob([pageHtmlContent], { type: 'text/html' });
+        
+        // 3. Create a temporary invisible anchor link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(blob);
+        downloadLink.download = 'OPAL-AI.html';
+        
+        // 4. Append, click, and instantly remove it to trigger the download
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        // 5. Clean up the memory reference
+        URL.revokeObjectURL(downloadLink.href);
+    } catch (err) {
+        console.error('Save operation encountered an error:', err);
+        alert('Could not save file automatically.');
+    }
+});
+</script>
+
+
 </body>
 </html>
