@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OPAL AI</title>
     <script src="https://jsdelivr.com/npm/marked@4.3.0/marked.min.js"></script>
+    <link rel="shortcut icon" href="assets/favicon.svg" >
     <style>
         * { box-sizing: border-box; }
         body {
@@ -57,9 +58,7 @@
             transition: border-color 0.2s;
         }
         input:focus { border-color: #3b82f6; }
-          .input-group button {
-    height: 44px;        /* Standardized line height for the input grid action elements */
-}
+        .input-group button { height: 44px; }
         button {
             padding: 0 24px;
             border-radius: 10px;
@@ -73,51 +72,32 @@
         }
         button:hover { background: #2563eb; }
         button:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
-        
-        /* New Voice Feature Buttons Styling */
-        /* New Voice Feature Buttons Styling */
-#mic-btn { 
-    background: #10b981;
-    width: 44px;        
-    min-width: 44px;     
-    height: 44px;        
-    padding: 0;          
-    font-size: 1.1rem;   
-}
-#mic-btn:hover { background: #059669; }
-#mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
-
-
-        .msg-wrapper {
-            display: flex;
-            flex-direction: column;
-            max-width: 85%;
-        }
+        #mic-btn { background: #10b981; width: 44px; min-width: 44px; height: 44px; padding: 0; font-size: 1.1rem; }
+        #mic-btn:hover { background: #059669; }
+        #mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
+        .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; position: relative; }
         .msg-wrapper.user { align-self: flex-end; align-items: flex-end; }
         .msg-wrapper.ai { align-self: flex-start; align-items: flex-start; }
-
         .msg { padding: 12px 16px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; font-size: 0.95rem; width: 100%; }
         .user .msg { background: #3b82f6; color: white; border-bottom-right-radius: 2px; }
         .ai .msg { background: #334155; color: #f1f5f9; border-bottom-left-radius: 2px; }
         
-        .speak-msg-btn {
-    background: #334155;
-    color: #94a3b8;
-    font-size: 0.75rem;  /* Keeps the font text neat and secondary */
-    font-weight: normal;
-    padding: 2px 6px;    
-    margin-top: 4px;
-    border-radius: 6px;
-    align-self: flex-start;
-    border: 1px solid #475569;
-    height: auto;        
-    cursor: pointer;
-}
-        .speak-msg-btn:hover { 
-    background: #475569; 
-    color: #f8fafc; 
-}
-
+        .action-buttons { display: flex; gap: 6px; margin-top: 4px; align-self: flex-start; }
+        .speak-msg-btn, .copy-btn {
+            background: #334155;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: normal;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            height: auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .speak-msg-btn:hover, .copy-btn:hover { background: #475569; color: #f8fafc; }
         .error .msg { background: #7f1d1d; border: 1px solid #f87171; color: #fca5a5; }
         .msg p { margin: 0 0 8px 0; }
         .msg p:last-child { margin-bottom: 0; }
@@ -125,7 +105,6 @@
         .msg pre { background: #0f172a; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; border: 1px solid #334155; }
         .msg pre code { background: transparent; padding: 0; color: #e2e8f0; font-size: 0.85rem; }
         .msg ul, .msg ol { margin: 4px 0; padding-left: 20px; }
-        
         .thinking { opacity: 0.7; font-style: italic; animation: pulse 1.5s infinite ease-in-out; }
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
     </style>
@@ -134,207 +113,255 @@
     <div id="chat-container">
         <h2>OPAL AI</h2>
         <div id="messages">
+            <!-- Initial AI Message Wrapper with standard action panel layout -->
             <div class="msg-wrapper ai">
                 <div class="msg">Hello! Ask me anything. I am powered by a live, open-infrastructure cloud engine.</div>
-                <button class="speak-msg-btn" onclick="speakText(this.previousElementSibling.innerText)">🔊 Speak</button>
+                <div class="action-buttons">
+                    <button class="speak-msg-btn" onclick="speakText(this.closest('.msg-wrapper').querySelector('.msg').innerText)">🔊</button>
+                    <button class="copy-btn" onclick="copyText(this.closest('.msg-wrapper').querySelector('.msg').innerText, this)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M9 18a2 2 0 0 1-1.425-.575A2 2 0 0 1 7 16V4q0-.825.575-1.4Q8.175 2 9 2h9q.825 0 1.4.6.6.575.6 1.4v12q0 .825-.6 1.425Q18.825 18 18 18zm0-2h9V4H9zm-4 6a2 2 0 0 1-1.425-.575A2 2 0 0 1 3 20V6h2v14h11v2zm4-6V4z"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="input-group">
             <input type="text" id="userInput" placeholder="Type a message..." autocomplete="off" onkeypress="if(event.key === 'Enter') send()" />
             <button id="sendBtn" onclick="send()">Send</button>
-            <button id="mic-btn" onclick="toggleListening()">🎤 Mic</button>
+            <button id="mic-btn" onclick="toggleListening()">🎤</button>
         </div>
     </div>
+    <a href="assets/notice.html" target="_blank">Privacy notice & more</a>
 
-    <script>
-        const chat = document.getElementById("messages");
-        const box = document.getElementById("userInput");
-        const btn = document.getElementById("sendBtn");
-        const micBtn = document.getElementById("mic-btn");
+    <script>const chat = document.getElementById("messages");
+const box = document.getElementById("userInput");
+const btn = document.getElementById("sendBtn");
+const micBtn = document.getElementById("mic-btn");
 
-        // Native Speech Synthesis (Text to Speech Engine)
-        function speakText(text) {
-            window.speechSynthesis.cancel(); // Stop any currently playing audio track
-            if (!text.trim()) return;
+function speakText(text) {
+    window.speechSynthesis.cancel();
+    if (!text.trim()) return;
+    const cleanText = text.replace(/[*_`#\-]/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+}
 
-            // Remove markdown syntax formatting so the engine reads clean text naturally
-            const cleanText = text.replace(/[*_`#\-]/g, '').trim();
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-            window.speechSynthesis.speak(utterance);
-        }
+function copyText(text, buttonElement) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        const originalContent = buttonElement.innerHTML;
+        buttonElement.innerText = "Copied!";
+        setTimeout(() => {
+            buttonElement.innerHTML = originalContent;
+        }, 2000);
+    }).catch(err => {
+        console.error("Could not copy text: ", err);
+    });
+}
 
-        // Native Speech Recognition Setup (Speech to Text Microphone Input)
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
-        let isListening = false;
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isListening = false;
 
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.lang = 'en-US';
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = () => {
+        isListening = true;
+        micBtn.textContent = "🛑";
+        micBtn.classList.add("listening");
+        box.placeholder = "Listening to your voice...";
+    };
+    recognition.onresult = (event) => {
+        const speechToText = event.results[0][0].transcript;
+        box.value = speechToText;
+        send();
+    };
+    recognition.onerror = (e) => {
+        console.error("Speech recognition error", e);
+        resetMicButton();
+    };
+    recognition.onend = () => {
+        resetMicButton();
+    };
+} else {
+    micBtn.style.display = "none";
+}
 
-            recognition.onstart = () => {
-                isListening = true;
-                micBtn.textContent = "🛑";
-                micBtn.classList.add("listening");
-                box.placeholder = "Listening to your voice...";
-            };
+function toggleListening() {
+    if (!recognition) return;
+    window.speechSynthesis.cancel();
+    if (isListening) {
+        recognition.stop();
+    } else {
+        recognition.start();
+    }
+}
 
-            recognition.onresult = (event) => {
-                const speechToText = event.results[0][0].transcript;
-                box.value = speechToText;
-                send(); // Auto-send the transcribed speech context directly
-            };
+function resetMicButton() {
+    isListening = false;
+    micBtn.textContent = "🎤";
+    micBtn.classList.remove("listening");
+    box.placeholder = "Type a message...";
+}
 
-            recognition.onerror = (e) => {
-                console.error("Speech recognition error", e);
-                resetMicButton();
-            };
+const systemPrompt = "You are OPAL AI, a helpful, concise AI assistant. If asked who made you or who created you, you must answer that OPAL made you.";
 
-            recognition.onend = () => {
-                resetMicButton();
-            };
-        } else {
-            micBtn.style.display = "none"; // Hide button if OS microphone features are blocked/unavailable
-        }
+let conversationHistory = [{ role: "system", content: systemPrompt }];
 
-        function toggleListening() {
-            if (!recognition) return;
-            window.speechSynthesis.cancel(); // Stop talking if user wants to speak
-            if (isListening) {
-                recognition.stop();
+if (typeof marked !== 'undefined') {
+    marked.setOptions({ gfm: true, breaks: true });
+}
+
+async function send() {
+    const text = box.value.trim();
+    if (!text || btn.disabled) return;
+
+    box.disabled = true;
+    btn.disabled = true;
+    if (isListening) recognition.stop();
+
+    // User message DOM element
+    const userWrapper = document.createElement("div");
+    userWrapper.className = "msg-wrapper user";
+    const userBubble = document.createElement("div");
+    userBubble.className = "msg";
+    userBubble.textContent = text;
+    userWrapper.appendChild(userBubble);
+    chat.appendChild(userWrapper);
+    
+    box.value = "";
+    chat.scrollTop = chat.scrollHeight;
+    conversationHistory.push({ role: "user", content: text });
+
+    // AI message container setups
+    const aiWrapper = document.createElement("div");
+    aiWrapper.className = "msg-wrapper ai";
+    const aiBubble = document.createElement("div");
+    aiBubble.className = "msg thinking";
+    aiBubble.textContent = "...";    
+    aiWrapper.appendChild(aiBubble);
+    chat.appendChild(aiWrapper);
+    chat.scrollTop = chat.scrollHeight;
+
+    // List of models to try sequentially if one fails or gets rate-limited (429)
+    const modelsToTry = ["openai", "mistral", "llama", "qwen"];
+    let response = null;
+    let selectedModel = "";
+
+    // Loop through the models until a connection succeeds
+    for (const model of modelsToTry) {
+        try {
+            console.log(`Attempting connection with model: ${model}`);
+            const res = await fetch("https://text.pollinations.ai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: model,
+                    messages: conversationHistory,
+                    stream: true
+                })
+            });
+
+            if (res.ok) {
+                response = res;
+                selectedModel = model;
+                break; // Break out of the loop once we successfully get a stream response
             } else {
-                recognition.start();
+                console.warn(`Model ${model} failed with status: ${res.status}`);
             }
+        } catch (err) {
+            console.error(`Network error attempting model ${model}:`, err);
+        }
+    }
+
+    try {
+        // If all models in our fallback list failed, throw an error
+        if (!response) {
+            throw new Error("All available AI engine endpoints are currently rate-limited or busy. Please wait a minute.");
         }
 
-        function resetMicButton() {
-            isListening = false;
-            micBtn.textContent = "🎤 Mic";
-            micBtn.classList.remove("listening");
-            box.placeholder = "Type a message...";
-        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let completeText = "";
+        let buffer = "";
 
-        const systemPrompt = "You are a helpful, concise AI assistant.";
-        let conversationHistory = [
-            { role: "system", content: systemPrompt }
-        ];
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-        if (typeof marked !== 'undefined') {
-            marked.setOptions({ gfm: true, breaks: true });
-        }
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop();
 
-        async function send() {
-            const text = box.value.trim();
-            if (!text || btn.disabled) return;
+            for (const line of lines) {
+                const cleanedLine = line.trim();
+                if (!cleanedLine || cleanedLine === "data: [DONE]") continue;
 
-            box.disabled = true;
-            btn.disabled = true;
-            if (isListening) recognition.stop();
-
-            // Render User Bubble
-            const userWrapper = document.createElement("div");
-            userWrapper.className = "msg-wrapper user";
-            const userBubble = document.createElement("div");
-            userBubble.className = "msg";
-            userBubble.textContent = text;
-            userWrapper.appendChild(userBubble);
-            chat.appendChild(userWrapper);
-            
-            box.value = "";
-            chat.scrollTop = chat.scrollHeight;
-            conversationHistory.push({ role: "user", content: text });
-
-            // Render AI Bubble structure
-            const aiWrapper = document.createElement("div");
-            aiWrapper.className = "msg-wrapper ai";
-            const aiBubble = document.createElement("div");
-            aiBubble.className = "msg thinking";
-            aiBubble.textContent = "...";
-            aiWrapper.appendChild(aiBubble);
-            chat.appendChild(aiWrapper);
-            chat.scrollTop = chat.scrollHeight;
-
-            try {
-                const response = await fetch("https://text.pollinations.ai/v1/chat/completions", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: "openai",
-                        messages: conversationHistory,
-                        stream: true
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Server returned status: ${response.status}`);
-                }
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let completeText = "";
-                let buffer = "";
-
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split("\n");
-                    buffer = lines.pop();
-
-                    for (const line of lines) {
-                        const cleanedLine = line.trim();
-                        if (!cleanedLine || cleanedLine === "data: [DONE]") continue;
-
-                        if (cleanedLine.startsWith("data: ")) {
-                            try {
-                                const parsed = JSON.parse(cleanedLine.replace(/^data:\s*/, ""));
-                                const contentChunk = parsed.choices?.[0]?.delta?.content || "";
-                                if (contentChunk) {
-                                    if (aiBubble.classList.contains("thinking")) {
-                                        aiBubble.classList.remove("thinking");
-                                        aiBubble.textContent = "";
-                                    }
-
-                                    completeText += contentChunk;
-
-                                    if (typeof marked !== 'undefined') {
-                                        aiBubble.innerHTML = marked.parse(completeText);
-                                    } else {
-                                        aiBubble.textContent = completeText;
-                                    }
-                                    chat.scrollTop = chat.scrollHeight;
-                                }
-                            } catch (e) {
-                                console.warn("Failed to parse line chunk:", cleanedLine, e);
+                if (cleanedLine.startsWith("data: ")) {
+                    try {
+                        const parsed = JSON.parse(cleanedLine.replace(/^data:\s*/, ""));
+                        const contentChunk = parsed.choices?.[0]?.delta?.content || "";
+                        if (contentChunk) {
+                            if (aiBubble.classList.contains("thinking")) {
+                                aiBubble.classList.remove("thinking");
+                                aiBubble.textContent = "";
                             }
+                            completeText += contentChunk;
+                            if (typeof marked !== 'undefined') {
+                                aiBubble.innerHTML = marked.parse(completeText);
+                            } else {
+                                aiBubble.textContent = completeText;
+                            }
+                            chat.scrollTop = chat.scrollHeight;
                         }
+                    } catch (e) {
+                        console.warn("Failed to parse line chunk:", cleanedLine, e);
                     }
                 }
-
-                // Append the dynamic text-to-speech button right after streaming ends
-                const speakBtn = document.createElement("button");
-                speakBtn.className = "speak-msg-btn";
-                speakBtn.innerHTML = "🔊";
-                speakBtn.onclick = function() { speakText(aiBubble.innerText); };
-                aiWrapper.appendChild(speakBtn);
-
-                conversationHistory.push({ role: "assistant", content: completeText });
-
-            } catch (error) {
-                console.error(error);
-                aiBubble.classList.remove("thinking");
-                aiWrapper.className = "msg-wrapper ai error";
-                aiBubble.textContent = `Error: ${error.message}`;
-            } finally {
-                box.disabled = false;
-                btn.disabled = false;
-                box.focus();
             }
         }
-    </script>
+
+        // Action Buttons Setup
+        const actionPanel = document.createElement("div");
+        actionPanel.className = "action-buttons";
+
+        const speakBtn = document.createElement("button");
+        speakBtn.className = "speak-msg-btn";
+        speakBtn.innerHTML = "🔊";
+        speakBtn.onclick = function() {
+            speakText(aiBubble.innerText);
+        };
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "copy-btn";
+        copyBtn.innerHTML = `<svg xmlns="http://w3.org" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M9 18a2 2 0 0 1-1.425-.575A2 2 0 0 1 7 16V4q0-.825.575-1.4Q8.175 2 9 2h9q.825 0 1.4.6.6.575.6 1.4v12q0 .825-.6 1.425Q18.825 18 18 18zm0-2h9V4H9zm-4 6a2 2 0 0 1-1.425-.575A2 2 0 0 1 3 20V6h2v14h11v2zm4-6V4z"/></svg> `;
+        copyBtn.onclick = function() {
+            copyText(aiBubble.innerText, copyBtn);
+        };
+
+        actionPanel.appendChild(speakBtn);
+        actionPanel.appendChild(copyBtn);
+        aiWrapper.appendChild(actionPanel);
+
+        conversationHistory.push({ role: "assistant", content: completeText });
+
+    } catch (error) {
+        console.error(error);
+        aiBubble.classList.remove("thinking");
+        aiWrapper.className = "msg-wrapper ai error";
+        aiBubble.textContent = `Error: ${error.message}`;
+    } finally {
+        box.disabled = false;
+        btn.disabled = false;
+        box.focus();
+        chat.scrollTop = chat.scrollHeight;
+    }
+}
+
+</script>
 </body>
 </html>
